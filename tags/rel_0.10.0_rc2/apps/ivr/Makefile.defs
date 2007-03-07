@@ -1,0 +1,10 @@
+# Python version: 2.5, 2.4 or 2.3
+#
+PYTHON_VERSION ?= 2.4
+
+# For flite text-to-speech set TTS = y
+#
+TTS ?= n
+
+FLITE_DIR = /usr/src/flite-1.2-release
+ALT_FLITE_DIR = /usr/include/flite
