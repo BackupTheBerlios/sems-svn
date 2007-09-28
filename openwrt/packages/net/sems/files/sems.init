@@ -1,0 +1,12 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2007 Stefan Sayer
+
+start() {
+        /usr/sbin/sems -f /etc/sems/sems.conf
+        /usr/sbin/ser-sems  -f /etc/sems/ser-sems.cfg -m 2
+}
+
+stop() {
+        killall sems
+	killall ser-sems
+}

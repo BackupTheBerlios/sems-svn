@@ -1,0 +1,12 @@
+--- sems-0.10.0-bundle-orig/ser-0.9.6-sems/Makefile.defs	2007-09-28 03:37:03.000000000 +0200
++++ sems-0.10.0-bundle/ser-0.9.6-sems/Makefile.defs	2007-09-28 03:37:20.000000000 +0200
+@@ -979,7 +979,8 @@
+ endif
+ YACC_FLAGS=-d -b cfg
+ # on solaris add -lxnet (e.g. LIBS= -lxnet)
+-LIBS= -lfl -ldl -lresolv
++#LIBS= -lfl -ldl -lresolv
++LIBS=  -ldl -lresolv
+ 
+ 
+ #os specific stuff
