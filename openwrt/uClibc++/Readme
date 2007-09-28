@@ -1,0 +1,5 @@
+This is the Makefile for building SEMS for openwrt with uClibc++
+instead of libstdc++.
+
+It compiles with warnings, but unfortunately it does not run 
+(tested with a uclibc++ 0.2.1 in quite old kamikaze on BCM3302).

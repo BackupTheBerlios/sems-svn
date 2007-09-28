@@ -1,0 +1,37 @@
+SEMS on OpenWRT
+
+This is for building SEMS for embedded devices running
+OpenWRT. Set default_application in /etc/sems.conf after
+installation.
+
+libstdc++ must me available on the device.
+
+Tested on Kamikaze / BCM47xx MIPS using libstdc++.
+
+Binary packages may be available for your platform at 
+ftp.iptel.org/pub/sems/openwrt
+
+Packages:
+
+ package name                    what               comment              tested?             
++------------------------------+------------------+---------------------+-------+
+ sems                                                                      Y
+ sems-codec-gsm                 GSM codec          only on fast devices!   Y
+ sems-codec-ilbc                iLBC codec         only on fast devices!   Y
+ sems-conference                conference app                             Y
+ sems-announcement              announcement app                           
+  sems-announcement-sampleaudio  sample audio files
+ sems-echo                      echo app                                   Y
+ sems-voicemail                 voicemail app                              
+  sems-voicemail-sampleaudio     sample wav files
+ sems-regagent                  register at SIP server                     Y
+ sems-uac-auth                  auth for registration                      Y
+ sems-timers                    session timers/user timers
+ sems-stats                     statistics, DI invocation (UDP)            Y
+ sems-xmlrpc2di                 DI invocation (XMLRPC)                     Y
+ sems-webconference             web controlled conference
+ sems-webconference-sampleaudio sample wav files
+ sems-serviceline               auto-attendant app 
+
+please report to semsdev mailing list if you successfully run other applications.
+Thanks.
