@@ -11,7 +11,9 @@ uClibc++ can be found in uClibc++/ folder.
 Tested on Kamikaze / BCM47xx MIPS with libstdc++ 6.0.3.
 
 Binary packages may be available for your platform at 
-ftp.iptel.org/pub/sems/openwrt
+ftp.iptel.org/pub/sems/openwrt, so add 
+ src packages http://ftp.iptel.org/pub/sems/openwrt/
+to your ipkg.conf and do ipkg update.
 
 Packages:
 

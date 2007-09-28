@@ -83,7 +83,7 @@ endef
 define Package/sems-echo
   SECTION:=net
   CATEGORY:=Network
-  DEPENDS:=sems 
+  DEPENDS:=sems sems-timers
   TITLE:=SEMS echo application
   URL:=http://iptel.org/sems/
 endef
