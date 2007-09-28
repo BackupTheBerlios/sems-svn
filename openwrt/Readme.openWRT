@@ -4,9 +4,11 @@ This is for building SEMS for embedded devices running
 OpenWRT. Set default_application in /etc/sems.conf after
 installation.
 
-libstdc++ must me available on the device.
+This is tested and works using libstdc++, which must me 
+available on the device. A currently broken version with
+uClibc++ can be found in uClibc++/ folder.
 
-Tested on Kamikaze / BCM47xx MIPS using libstdc++.
+Tested on Kamikaze / BCM47xx MIPS with libstdc++ 6.0.3.
 
 Binary packages may be available for your platform at 
 ftp.iptel.org/pub/sems/openwrt
