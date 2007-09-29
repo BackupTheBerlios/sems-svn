@@ -15,7 +15,7 @@ PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-bundle.tar.gz
 PKG_SOURCE_URL:=http://ftp.iptel.org/pub/sems/
-PKG_MD5SUM:=62d9e6b0c1ca83f21494aa7515e2f096
+PKG_MD5SUM:=6ac8488df9f91e2df50f9151185b27b3
 PKG_CAT:=zcat
 
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
@@ -91,7 +91,7 @@ endef
 define Package/sems-voicemail
   SECTION:=net
   CATEGORY:=Network
-  DEPENDS:=sems 
+  DEPENDS:=sems sems-timers 
   TITLE:=SEMS voicemail application
   URL:=http://iptel.org/sems/
 endef
