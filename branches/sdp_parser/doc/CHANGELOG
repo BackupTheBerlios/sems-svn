@@ -1,0 +1,116 @@
+
+Changelog for SEMS 
+ - simple call generator application 
+
+ - fixed artifacts on wav files with extra chunks
+
+ - support for spandsp DTMF detection 
+
+ - callback application
+
+ - prepaid and click2dial applications
+
+ - support for extra headers in dialout sessions
+
+ - support for setting the URI of a session in SDP
+
+ - early media receiving example
+
+ - support for posting events into conferences
+
+ - support for receiving early media
+
+ - support for local audio as audio sources into audio engine 
+   on the same channel as RTP 
+
+ - outbound_proxy option sets next hop on outgoing dialogs and 
+   registrations
+
+ - b/f: don't reuse dialog for SIP authenticated re-sending of INVITE
+
+Version 0.10.0 (final)
+ - new module for exposing internal DI APIs via XMLRPC 
+
+ - new module for triggering calls via DI interface
+ 
+ - new DI/XMLRPC controlled conference application, that can for example
+   be used for conference rooms with web interface
+
+ - CallWatcher and a more powerful dialout function simplifies 
+   interfacing to external applications 
+
+ - many examples for quick start of custom service development, 
+   for example new serviceline (auto-attendant) application
+
+ - b2bua implementation with media relay
+ 
+ - language awareness of conference application 
+
+ - DB support for conference and voicemail prompts, and announcements
+
+ - PromptCollection simplifies usage of prompts in applications
+
+ - b2bua support in py_sems embedded python interpreter
+
+ - corrected RTP timeout detection 
+
+ - new api for custom logging modules, new in-memory ring buffer 
+   logging module
+
+ - accept all possible payloads and payload switching on the fly 
+   (thanks to Maxim Sobolyev/sippysoft) 
+
+ - changing callgroups (media processing threads) in running sessions 
+
+ - support for setting sessions on hold 
+
+ - support for OpenSer 1.3 
+
+ - substantially improved documentation 
+
+ - 'bundle' install method for easy installation
+
+ - support for OpenWRT package build
+
+ ... and many bugfixes
+
+Version 0.10.0 rc2
+
+ - new Adaptive jitter buffer as alternative playout method
+   Contributed by Andriy Pylypenko/Sippy Software
+
+ - new PIN collect application with transfer to e.g. 
+   separate conference bridge
+
+ - new SIP registrar client for registration at a 
+   SIP registrar
+
+ - new UAC authentication component
+
+ - new faster announcement application with memory caching for 
+   audio files
+
+ - new pre call announcement method using REFER 
+
+ - new plug-in py_sems using a Python/C++ binding generator for even more power 
+   in python scripts
+
+ - stats server can be used for monitoring custom modules/applications
+
+ - session specific parameters by default taken from unified 
+   session parameters header 
+
+ - signature configurable 
+
+ - install and make system updated
+
+ - added documentation 
+
+ - some security bugfixes (namely fixing possible 
+   buffer overflows)
+
+ - ...and a lot of other bug fixes
+
+
+Version 0.10.0 rc1
+ ...

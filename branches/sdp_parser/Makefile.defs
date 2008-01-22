@@ -1,0 +1,190 @@
+SVN_REV=r$(shell svnversion -n .)
+
+#version number
+VERSION = 0
+PATCHLEVEL = 10
+SUBLEVEL = 0
+EXTRAVERSION ?= -$(SVN_REV)
+
+RELEASE=$(VERSION).$(PATCHLEVEL).$(SUBLEVEL)$(EXTRAVERSION)
+
+CPPFLAGS += -D_DEBUG \
+	  -D_THREAD_SAFE -D_REENTRANT \
+	  -DVERSION='"$(RELEASE)"' -DARCH='"$(ARCH)"'\
+	  -DOS='"$(OS)"' 	\
+#         -DMAX_RTP_SESSIONS=8192 \
+#         -DOpenSER \
+#	  -DSUPPORT_IPV6 \
+
+# compile with spandsp DTMF detection? see soft-switch.org
+#   this needs a fairly new version of spandsp - tested with 0.0.4pre11
+#   will not work with spandsp 0.0.2 .
+#   (which means that current debian and gentoo packages don't work)
+#   
+#USE_SPANDSP    = yes
+# statically link spandsp library? 
+#   (might need adjusting spandsp lib path LIBSPANDSP_LDIR - may be /usr/lib)
+#LIBSPANDSP_STATIC = yes
+#LIBSPANDSP_LDIR = /usr/local/lib/
+
+LDFLAGS = -lm
+
+OS     = $(shell uname -s | sed -e s/SunOS/solaris/ | tr "[A-Z]" "[a-z]")
+
+ifeq ($(OS),solaris)
+	GETARCH=uname -p
+else
+	GETARCH=uname -m
+endif
+
+ARCH := $(shell $(GETARCH) |sed -e s/i.86/i386/ -e s/sun4u/sparc64/  \
+			-e s/armv4l/arm/ -e "s/Power Macintosh/ppc/" \
+			-e "s/cobalt/mips2/" \
+			-e s/amd64/x86_64/ )
+
+# fix sparc -> sparc64
+ifeq ($(ARCH),sparc)
+	ifeq ($(shell uname -m),sun4u)
+		ARCH := sparc64
+	endif
+endif
+
+# need OS specific for this ?
+CXX = g++
+CC = gcc
+LD = $(CC)
+
+
+CXXFLAGS := -Wall -Wno-reorder -fPIC -g \
+	    -O2 $(EXTRA_CXXFLAGS)
+         
+CFLAGS := -Wall -fPIC -g -O2 $(EXTRA_CFLAGS)
+
+ifeq ($(DEBUG_PLAYOUT), yes)
+CPPFLAGS +=  -DDEBUG_PLAYOUTBUF
+endif
+
+TARGET =
+ifeq ($(OS), linux)
+	LDFLAGS +=  -ldl -rdynamic -lpthread
+else
+ifeq ($(OS), freebsd)
+	LDFLAGS += -rdynamic -pthread
+else
+ifeq ($(OS), openbsd)
+	LDFLAGS += -rdynamic -pthread
+else
+ifeq ($(OS), netbsd)
+	LDFLAGS += -rdynamic -pthread
+else
+	LDFLAGS+= -ldl -lsocket -lnsl -lpthread
+	TARGET=solaris
+endif
+endif
+endif
+endif
+
+LIB_LDFLAGS = $(LDFLAGS) -shared
+
+# install path is $(basedir) $(prefix) 
+# example:
+#  creating a bin. archive in /tmp, which unpacks in /usr/local
+#  basedir=/tmp
+#  prefix=/usr/local
+
+DESTDIR ?= /usr/local
+PREFIX ?= $(DESTDIR)
+prefix = $(PREFIX)
+BASEDIR ?=
+basedir = $(BASEDIR)
+# for install-ser-cfg
+SERPREFIX ?= /opt/ser-sems
+ser-prefix = $(SERPREFIX)
+
+# Redhat users should use sems.redhat instead of sems
+# the file will be to $(bin-prefix)/$(bin-dir)/sems copied.
+start-script = sems.redhat
+
+# install prefixes for various stuff
+cfg-prefix = $(basedir)$(prefix)
+bin-prefix = $(basedir)$(prefix)
+modules-prefix = $(basedir)$(prefix)
+doc-prefix = $(basedir)$(prefix)
+audio-prefix = $(basedir)$(prefix)
+
+# dirs
+cfg-dir = etc/sems/
+
+bin-dir = sbin/
+modules-dir = lib/sems/plug-in/
+audio-dir = lib/sems/audio/
+
+ser-cfg-dir = etc/ser/
+
+ifeq ($(OS), linux)
+	doc-dir = share/doc/sems/
+	man-dir = share/man/
+else
+ifeq ($(OS), freebsd)
+	doc-dir = share/doc/sems/
+	man-dir = man/
+else
+ifeq ($(OS), openbsd)
+	doc-dir = share/doc/sems/
+	man-dir = man/
+else
+ifeq ($(OS), netbsd)
+	doc-dir = share/doc/sems
+	man-dir = man/
+else
+	doc-dir = doc/sems/
+	man-dir = man/
+endif
+endif
+endif
+endif
+# target dirs for various stuff
+bin-target = $(prefix)/$(bin-dir)
+cfg-target = $(prefix)/$(cfg-dir)
+modules-target = $(prefix)/$(modules-dir)
+audio-target = $(prefix)/$(audio-dir)
+ser-cfg-target =$(ser-prefix)/$(ser-cfg-dir)
+
+ifeq ($(OS), solaris)
+#use GNU versions
+INSTALL ?= ginstall
+TAR ?= gtar
+else
+INSTALL ?= install 
+TAR ?= tar
+endif
+
+INSTALL-TOUCH = touch          # used to create the file first (good to 
+                               #  make solaris install work)
+INSTALL-CFG = $(INSTALL) -m 644
+INSTALL-BIN = $(INSTALL) -m 755
+INSTALL-MODULES = $(INSTALL) -m 755
+INSTALL-DOC = $(INSTALL) -m 644
+INSTALL-AUDIO = $(INSTALL) -m 644
+
+
+mk-install-dirs: $(cfg-prefix)/$(cfg-dir) $(bin-prefix)/$(bin-dir) \
+			$(modules-prefix)/$(modules-dir) \
+			$(audio-prefix)/$(audio-dir) \
+			$(doc-prefix)/$(doc-dir)
+
+$(cfg-prefix)/$(cfg-dir): 
+	mkdir -p $(cfg-prefix)/$(cfg-dir)
+
+$(bin-prefix)/$(bin-dir):
+	mkdir -p $(bin-prefix)/$(bin-dir)
+
+$(modules-prefix)/$(modules-dir):
+	mkdir -p $(modules-prefix)/$(modules-dir)
+
+$(audio-prefix)/$(audio-dir):
+	mkdir -p $(audio-prefix)/$(audio-dir)
+
+$(doc-prefix)/$(doc-dir):
+	mkdir -p $(doc-prefix)/$(doc-dir)
+
