@@ -1,0 +1,364 @@
+
+          +------------------------------------+
+          | SIP Express Media Server  - README |
+          +------------------------------------+
+
+
+Introduction:
+
+ SEMS is a free, high performance, extensible media server 
+ for SIP (RFC3261) based VoIP services. 
+
+ It is intended to complement proxy/registrar servers
+ in VoIP networks for all applications where server-
+ side processing of audio is required, for example away 
+ or pre-call announcements, voicemail, or network side 
+ conferencing. 
+
+ SEMS can be used to implement simple high performance 
+ components like announcement servers as building 
+ blocks of more complex applications, or, using its powerful 
+ framework for application development including back-to-back 
+ user agent (B2BUA) and state machine scripting functionality, 
+ complex VoIP services can be realized completely in SEMS. 
+ 
+ SEMS only supports patent free codecs. That means that codecs
+ like g729 won't be supported. On the other hand, SEMS supports 
+ all important patent free codecs out of the box (g711u, g711a, 
+ GSM06.10, speex, G726, L16 and iLBC). Integrating other codecs 
+ in SEMS is very simple (patented or not).
+
+ SEMS shows very good performance on current standard
+ PC architecture based server systems. It has sucessfully
+ been run with 1200 G.711 conference channels on a quad-core
+ Intel(R) Xeon at 2GHz (700 GSM, 280 iLBC channels), and up to 
+ 5000 channels on a dual quad Xeon at 2.9GHz. On the 
+ other hand it also runs on very small devices - for example 
+ small embedded systems like routers running OpenWRT, for which 
+ of course the achievable channel count is not that high.
+
+License:
+
+ SEMS is free (speech+beer) software. It is licensed under dual 
+ license terms, the GPL (v2+) and proprietary license.
+
+ See doc/COPYING for details.
+
+Applications:
+
+ The following applications are shipped with SEMS :
+
+  * announcement   plays an announcement
+
+  * voicemail      records voice messages and sends them 
+                   as email, saves them to a voicebox, or
+                   both
+
+  * conference     enables many people to talk together 
+                   at the same time
+
+  * webconference  conference application that can be 
+                   controlled from an external program, 
+                   e.g. a website 
+
+  * echo           test module to echo the caller's voice
+ 
+  * voicebox       users can dial in to the voicebox to check
+                   their messages
+
+  * annrecorder    users can record their personal greeting 
+                   message
+
+  * mailbox        auto-attendant that saves voicemails into
+                   an IMAP server. Users can dial in to check
+                   their messages (simpler version)
+
+  * ann_b2b        pre-call-announcement, plays announcement 
+                   before connecting the callee in B2BUA mode
+ 
+  * announce_transfer  pre-call-announcement, plays announcement 
+                   and then transfers the caller to the callee 
+                   using REFER
+
+  * early_announce (pre-call) announcement using early media (183),
+                   optionally continues the call in B2BUA mode
+
+  * auth_b2b       B2BUA app that changes identity and authenticates
+                   second call leg
+
+  * conf_auth      collect a PIN number, verify it against an 
+                   XMLRPC authentication server and connects in 
+                   B2BUA mode
+
+  * pin_collect    collect a PIN, optionally verify it, and transfer
+                   the call into a conference
+
+  * callback       reject the call, call back caller later and have 
+                   her enter a number to call in b2bua with media relay
+                   mode
+
+  * reg_agent     SIP REGISTER to register SEMS' contact to an aor
+
+  * sw_prepaid_sip prepaid application
+  
+  * call_timer     B2BUA, ends the call after a certain time
+
+  * precoded_announce plays preencoded announcements
+
+
+Developing and customizing Applications and services:
+
+ SEMS comes with a set of example applications intended to help 
+ development of custom services, including a calling card 
+ application, a traffic generator, a component to control the 
+ media server via XMLRPC, and announcements played from DB.
+
+ DSM state machine scripting is a powerful yet simple method
+ to rapidly implement custom applications. With this method,
+ the service logic is written as an easy to understand 
+ textual definition of a state machine, which is interpreted
+ and executed for every call. The (domain specific) language 
+ for defining state machines can be extended by implementing
+ modules. A set of useful modules are shipped with SEMS, 
+ including MySQL database access module, Python module, 
+ conference support, Amazon AWS and more. 
+
+ SEMS' core implements basic call and audio processing, 
+ and loads plug-ins which extend the system. Audio
+ plug-ins enable new codecs and file formats, 
+ application plug-ins implement the services' logic.
+ Other modules called component modules provide 
+ functionality for other modules to use.
+
+ You can easily extend SEMS by creating your own plug-ins.
+ Applications can be written using the SEMS framework API 
+ in C++, or in Python using an embedded python interpreter 
+ of the ivr or py_sems modules, or the DSM.
+
+Requirements:
+
+ All requirements are optional.
+
+ 1. optional: SER version 0.9.6-sems, or SER 2.0 with SASI:
+    SIP Epress Router (www.iptel.org/ser)
+
+    SEMS has its own SIP stack. SEMS can also use SER as its 
+    SIP stack. SEMS & SER communicate through unix socket (0.9.6),
+    or binrpc protocol (2.0 SASI).
+
+ 2. Python version >= 2.3 for the ivr (embedded python interpreter)
+    and py_sems, optional
+
+ 3. flite speech synthesizer for TTS in the ivr, optional
+
+ 4. lame >= 3.95 for mp3 file output, optional. mpg123 for mp3 playback,
+    optional
+
+ 5. xmlrpcpp for XMLRPC control, optional
+
+ 6. spandsp library for DTMF detection and PLC, optional
+    (SEMS has its own implementations for both)
+
+ 7. libZRTP SDK (http://zfoneproject.com) for ZRTP, optional
+
+How to get started with SEMS:
+
+  To try out SEMS, the easiest is to get a release from 
+  http://ftp.iptel.org/pub/sems/, unpack and install it 
+  using the usual make && make install. After installation, the 
+  configuration file /usr/local/etc/sems/sems.conf needs to be 
+  adapted.
+
+  On debian, you can add the iptel.org SEMS repository to 
+  /etc/apt/sources.list:
+   deb http://ftp.iptel.org/pub/sems/debian lenny free
+   deb-src http://ftp.iptel.org/pub/sems/debian lenny free
+  and install SEMS from binary packages with: 
+  $ apt-get install sems sems-python-modules
+  If you want to build SEMS from source on debian, see below.
+
+  On Fedora, simply do 
+   $ sudo yum install sems
+  and sems package will be installed.
+ 
+  You can also follow one of the tutorials
+  linked from the SEMS homepage
+  (e.g. http://www.iptel.org/howto_sems_voicemail).The Application
+  Modules Documentation page then gives an overview of the application
+  modules that come with SEMS 
+  (http://ftp.iptel.org/pub/sems/doc/current/AppDoc.html).
+  
+  If you are interested in writing your own applications, the 
+  application development tutorial is a good start 
+  (http://www.iptel.org/sems/sems_application_development_tutorial),
+  together  with the design overview 
+  (http://www.iptel.org/files/semsng-designoverview.pdf) and the example
+  applications (apps/examples/).
+  
+Installation:
+
+ 1. Download SEMS 
+     Download the source tarball from ftp://ftp.iptel.org/pub/sems/,
+     or get the newest version through svn:
+      $ svn checkout svn://svn.berlios.de/sems/trunk
+       -or-
+      $ svn checkout http://svn.berlios.de/svnroot/repos/sems/trunk 
+
+ 2. Compile SEMS
+
+      $ make all
+      $ make install
+
+    Notice: you don't need to execute 'make install' if you want to 
+            run SEMS from the source tree, but in this case some paths 
+            in the config files will need to be adapted.
+            If you want to install to a different prefix than /usr/local,
+            use PREFIX=/some/other/prefix 
+     
+    For detailed instructions for some modules, have a look at
+    doc/COMPILING as well.
+
+ 3. Look at the default configuration file whether it fits your need:
+
+    If you installed SEMS with 'make install', the configuration
+    is at '/usr/local/etc/sems/sems.conf'. 
+    Else make your own using sems.conf.sample.
+
+ 4. Optional, needed if you want to use SER as SEMS frontend (SIP stack):
+    Get and start SER as SIP stack for SEMS: 
+    
+    By default, sipctrl plugin is loaded, which is the integrated SIP 
+    stack for SEMS. If SER should be used, the following procedure is
+    necessary for ser  as SIP stack: 
+    o For ser 2.0/sasi use this patched ser2.0 version:
+      http://ftp.iptel.org/pub/sems/ser2-sasi-080108.tar.bz2 
+      (or ser head possibly with patches from the bug tracker at 
+       http://tracker.iptel.org/browse/SER-346 )    
+      and core/etc/ser-sems.sasi.cfg. Then load the binrpcctrl module.
+
+ 5. Start SEMS:
+
+    If you installed SEMS with 'make install', sems can be
+    found at '/usr/local/sbin/sems'.
+    If you need help starting 'sems', try 'sems -h'.
+
+ 6. Using SEMS
+    
+    SEMS needs to be told from the many possible applications that are
+    loaded which one to run. You can simply set the application 
+    in sems.conf, e.g. application=conference. You can also define an
+    application mapping, i.e. numbers (R-URIs) that will be mapped to
+    applications, see the explanation of 'application' parameter in 
+    sems.conf.
+   
+    Alternatively, the SIP-stack-SER can be configured in ser-sems.cfg
+    to send all calls directly to one application, in that case the line
+     if(!t_write_unix("/tmp/sems_sock","sems/app_headers"))
+    in ser-sems.cfg could be changed to e.g.
+     if(!t_write_unix("/tmp/sems_sock","conference"))
+    A sample ser.cfg file in this style can be found at 
+    http://ftp.iptel.org/pub/sems/ser.cfg
+
+Creating packages on debian (ubuntu, ...):
+
+   install debian package build tools:
+   $ apt-get install debhelper devscripts
+
+   install dependencies:
+   $  apt-get install g++ make libspandsp-dev flite-dev libspeex-dev \
+         libssl-dev python-dev python-sip4-dev openssl
+   
+   get the source: 
+   $ wget ftp.iptel.org/pub/sems/sems-x.y.z.tar.gz ; tar xzvf sems-x.y.z.tar.gz
+   $ cd sems-x.y.z ; ln -s pkg/debian .
+
+   set version in changelog if not correct
+   $ dch -v x.y.z "SEMS x.y.z release"
+   
+   build package:
+   $ dpkg-buildpackage -rfakeroot -us -uc
+
+   install package in .. using dpkg.
+
+Installed files using 'make install':
+
+    /usr/local/sbin/sems                 : SEMS executable
+    /usr/local/lib/sems/plug-in/*        : plug-ins
+    /usr/local/lib/sems/audio/*          : default path for audio files
+    /usr/local/lib/sems/ivr/*            : precompiled IVR scripts
+    /usr/local/etc/sems/sems.conf        : configuration file
+    /usr/local/etc/sems/etc/*            : modules configuration files
+    /usr/local/share/doc/sems/README     : this README.
+
+    source_path/scripts/sems[.redhat]    : example start-up scripts.
+    source_path/sems.conf.example        : example configuration file.
+
+Documentation:
+
+  In the doc/ directory there is a set of files describing the
+  applications shipped with SEMS, alongside some more documentation.
+  Generate the doxygen documentation with 'make doc' in doc/doxygen_doc,
+  that contains all these files as well.
+
+  All this and more documentation is available online linked from 
+  the SEMS homepage: 
+    http://www.iptel.org/sems.
+
+Support, mailing lists, bugs and contact:
+
+  Please have a look at the documentation and other information on 
+  the SEMS homepage (www.iptel.org/sems). 
+
+  Best-effort support is given through the mailing lists for SEMS,
+  sems@iptel.org and semsdev@iptel.org, which are the first address 
+  to ask for help, report bugs and improvements. You need to be 
+  subscribed to be able to post to the lists: http://lists.iptel.org.
+  The mailing list archives at   http://lists.iptel.org/pipermail/sems/ 
+  and http://lists.iptel.org/pipermail/semsdev/ can be a great help as
+  well (especially with google site search on lists.iptel.org, e.g.
+  http://www.google.com/coop/cse?cx=006590474108803368786%3A158hxzctv4u ). 
+
+  The bug tracker for SEMS is at http://tracker.iptel.org/browse/SEMS
+  Please submit all bugs, crashes and feature requests you encounter.
+
+Authors:
+
+  Raphael Coeffic (rco@iptel.org), the father of SEMS, 
+  Stefan Sayer (stefan.sayer@gmail.com), current lead developer,
+  and all contributors:
+    Alex Gradinar
+    Alfred E Heggestad
+    Andreas Granig
+    Andrey Samusenko
+    Andriy I Pylypenko
+    B. Oldenburg
+    Balint Kovacs
+    Bogdan Pintea
+    Greger Viken Teigre
+    Grzegorz Stanislawski
+    Helmut Kuper
+    Jeremy A
+    Jiri Kuthan
+    Juha Heinanen
+    Ovidiu Sas
+    Peter Lemenkov
+    Peter Loeppky
+    Richard Newman
+    Robert Szokovacs
+    Rui Jin Zheng
+    Tom van der Geer
+    Ulrich Abend
+   (if you want to be added or removed from this list, please mail to stefan.sayer@gmail.com)
+ 
+  Special thanks to IPTEGO GmbH and iptelorg GmbH for sponsoring development of SEMS.
+
+Contributions:
+
+  All kinds of contributions and bug fixes are very welcome, for 
+  example new application or codec modules, documentation pages, howtos
+  etc. Please email one of the lists or the authors.
+
+  Please also have a look at the contributions license policy 
+  (see doc/COPYING).
+  
+SEMS - the media-S in the SLAMP.
