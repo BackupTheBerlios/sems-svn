@@ -1,0 +1,47 @@
+sems (1.2.0) unstable; urgency=low
+
+  * SEMS 1.2.0 release
+
+ -- Stefan Sayer <stefan@waspi>  Tue, 30 Mar 2010 21:46:39 +0200
+
+sems (1.1.1) unstable; urgency=low
+
+  * SEMS 1.1.1 bugfix release   - fixed Via HF missing the port number
+    in ACK to 200 reply  - do not try to scale too short RTP packets  -
+    fixed initialization of SSL - caused random crashing of xmlrpc
+    server  - fix size() for AmArg struct type  - authenticate on both
+    401 and 407 reply in click2dial  - fixed ssl build dependency for
+    DIAMETER client in deb
+
+ -- root <root@UNPROVISIONED.lab.iptego.de>  Tue, 07 Jul 2009 15:13:24 +0200
+
+sems (1.1.0-1) unstable; urgency=low
+
+  * DSM state machine scripting (it's cool!)
+  * an (experimental) ISDN gateway module
+  * binrpc: MT (SER->) and connection pool (->SER)
+  * MT xmlrpc server
+  * controlled server shutdown
+  * improved logging
+  * g722 in 8khz compat mode
+  * out of dialog request handling for modules & dialogs without
+    sessions
+  * audio file autorewind, AmAudio mixing
+  * SIP and media IP separately configurable
+  * UID/DID support for voicemail/-box/annrecorder
+  * and quite some bugs and mem leaks fixed, documentation, etc. 
+
+ -- Stefan Sayer <stefan.sayer@iptego.com>  Tue, 20 Jan 2009 18:11:25 +0100
+
+sems (1.1.0-0rc1) unstable; urgency=low
+
+  * Debian Release Candidate 1 for 1.1.
+
+ -- Stefan Sayer <sayer@iptel.org>  Mon, 8 Dec 2008 23:01:40 +0200
+
+sems (1.0.0-0pre1-r856M) unstable; urgency=low
+
+  * Debian Release Candidate 1 for 1.0.
+
+ -- Stefan Sayer <sayer@iptel.org>  Sun, 2 Mar 2002 23:41:31 +0200
+
