@@ -42,6 +42,10 @@ using std::string;
 #define SIP_FLAGS_VERBATIM     1 // send request verbatim, 
                                  // i.e. modify as little as possible
 
+#define E_OK              0
+#define E_FAILED         -1
+#define E_IN_PROGRESS    -2
+
 /** \brief SIP transaction representation */
 struct AmSipTransaction
 {
@@ -141,8 +145,9 @@ class AmSipDialog
   AmSipDialog(AmSipDialogEventHandler* h=0);
   ~AmSipDialog();
 
-  bool   getUACTransPending() { return !uac_trans.empty(); }
-  int    getStatus() { return status; }
+  bool getUACTransPending();
+  bool getUACInvTransPending();
+  int  getStatus() { return status; }
   string getContactHdr();
 
   void updateStatus(const AmSipRequest& req);

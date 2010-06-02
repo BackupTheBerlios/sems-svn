@@ -111,7 +111,8 @@ void AmB2BSession::onB2BEvent(B2BEvent* ev)
 
       if(reply_ev->forward){
 
-        std::map<int,AmSipRequest>::iterator t_req = recvd_req.find(reply_ev->reply.cseq);
+        std::map<int,AmSipRequest>::iterator t_req = 
+	  recvd_req.find(reply_ev->reply.cseq);
 	if (t_req != recvd_req.end()) {
 	  relaySip(t_req->second,reply_ev->reply);
 		
@@ -150,17 +151,23 @@ void AmB2BSession::onB2BEvent(B2BEvent* ev)
 	  body_ev->is_offer?"true":"false", body_ev->r_cseq);
       
       if (body_ev->is_offer) {
+	if (dlg.getUACInvTransPending()) {
+	  // INVITE UAC transaction already in progress - save body
+	  DBG("INVITE UAC transaction already in progress..."
+	      "saving event with r_cseq %d\n", body_ev->r_cseq);
+	  pending_relayed_msgbodies.push(new B2BMsgBodyEvent(*body_ev));
+	  DBG("Now %zd relayed bodies pending\n", pending_relayed_msgbodies.size());
+	  return;
+	}
+
 	// send INVITE with SDP
-	trans_ticket tt; // empty transaction ticket
-	relayed_body_req[dlg.cseq] = AmSipTransaction("INVITE", body_ev->r_cseq, tt);
-	if (dlg.reinvite("", body_ev->content_type, body_ev->body)) {
-	   ERROR("sending reinvite with relayed body\n");
-	   relayed_body_req.erase(dlg.cseq);
-	   // TODO?: relay error back instead?
-	   // tear down:
-	   DBG("error sending reinvite - terminating this and the other leg\n");
-	   terminateOtherLeg();	   
-	   terminateLeg();
+	int reinv_result = sendRelayedBody(body_ev);
+	if (reinv_result) {
+	  ERROR("sending reinvite with relayed body\n");
+	  // tear down: (TODO?: relay error back instead?)
+	  DBG("error sending reinvite - terminating this and the other leg\n");
+	  terminateOtherLeg();	   
+	  terminateLeg();
 	}
       } else {
 	// is_answer - send 200 ACK
@@ -203,6 +210,7 @@ void AmB2BSession::onSipReply(const AmSipReply& reply)
   DBG("onSipReply: %i %s (fwd=%i)\n",reply.code,reply.reason.c_str(),fwd);
   DBG("onSipReply: content-type = %s\n",reply.content_type.c_str());
   if(fwd) {
+    // request was relayed from the other dialog
     AmSipReply n_reply = reply;
     n_reply.cseq = t->second.cseq;
     
@@ -216,48 +224,95 @@ void AmB2BSession::onSipReply(const AmSipReply& reply)
 	relayed_req.erase(t);
     }
   } else {
-    bool relay_body = 
-    // is a reply to request we sent, 
-    // even though we are in sip_relay_only  mode
-      (sip_relay_only && 
-       // positive reply
-       (200 <= reply.code) && (reply.code < 300) 
-       // with body
-       && !reply.body.empty()); // todo: && method == INVITE???
-    
-    if (relay_body) {
-      // is it an answer to a relayed body, or an answer to empty re-INVITE? 
-      TransMap::iterator rel_body_it = relayed_body_req.find(reply.cseq);
-      bool is_offer =  (rel_body_it == relayed_body_req.end());
-      // answer to empty re-INVITE we have sent
-      relayEvent(new B2BMsgBodyEvent(reply.content_type, reply.body, 
-				     is_offer, is_offer ? reply.cseq : rel_body_it->second.cseq));
+    // it's a reply to request we originated
+    bool is_inv_trans = dlg.get_uac_trans_method(reply.cseq) == "INVITE";
+    if (sip_relay_only) {
+      // even though we are in sip_relay_only mode
 
-      if (is_offer) {	
-	// onSipReply from AmSession without do_200_ack in dlg.updateStatus(reply)
-	// todo (?): add do_200_ack flag to AmSession::onSipReply and call AmSession::onSipReply
-	CALL_EVENT_H(onSipReply,reply);
-	
-	int status = dlg.getStatus();
-	dlg.updateStatus(reply, false);
-	
-	if (status != dlg.getStatus())
-	  DBG("Dialog status changed %s -> %s (stopped=%s) \n", 
+      bool relay_body = 
+	(// positive reply
+	 (200 <= reply.code) && (reply.code < 300) 
+	 // with body
+	 && !reply.body.empty() &&
+	 // in reply to INVITE
+	 is_inv_trans);
+      
+      if (relay_body) {
+	// is it an answer to a relayed body, or an answer to empty re-INVITE? 
+	TransMap::iterator rel_body_it = relayed_body_req.find(reply.cseq);
+	bool is_offer =  (rel_body_it == relayed_body_req.end());
+	relayEvent(new B2BMsgBodyEvent(reply.content_type, reply.body, is_offer, 
+				       is_offer ? reply.cseq : rel_body_it->second.cseq));
+
+	if (is_offer) {
+	  // it's a reply to empty re-INVITE we have sent
+
+	  // --  onSipReply from AmSession -- 
+	  // without do_200_ack in dlg.updateStatus(reply)
+	  // todo (?): add do_200_ack flag to AmSession::onSipReply and call it
+	  CALL_EVENT_H(onSipReply,reply);
+	  
+	  int status = dlg.getStatus();
+	  dlg.updateStatus(reply, false);
+	  
+	  if (status != dlg.getStatus())
+	    DBG("Dialog status changed %s -> %s (stopped=%s) \n", 
+		AmSipDialog::status2str[status], 
+		AmSipDialog::status2str[dlg.getStatus()],
+		getStopped() ? "true" : "false");
+	  else 
+	    DBG("Dialog status stays %s (stopped=%s)\n", 
 	      AmSipDialog::status2str[status], 
-	      AmSipDialog::status2str[dlg.getStatus()],
-	      getStopped() ? "true" : "false");
-	else 
-	  DBG("Dialog status stays %s (stopped=%s)\n", AmSipDialog::status2str[status], 
-	      getStopped() ? "true" : "false");
+		getStopped() ? "true" : "false");
+	  // -- end onSipReply from AmSession --
+	} else {
+	  // it's an answer to a re-INVITE with SDP
+	  relayed_body_req.erase(rel_body_it);
+	  AmSession::onSipReply(reply);
+	}
+
       } else {
-	relayed_body_req.erase(rel_body_it);
 	AmSession::onSipReply(reply);
-      }      
-    } else {
-      AmSession::onSipReply(reply);
+      }
+
+      // check for failed reinvites
+      if (is_inv_trans && reply.code >= 300) {
+	onFailedReinvite(reply);
+      }
     }
+
     relayEvent(new B2BSipReplyEvent(reply,false));
   }
+
+  // check for pending bodies
+  if (reply.code >= 200 && // check only when a transaction finished
+      pending_relayed_msgbodies.size() && !dlg.getUACInvTransPending()) {
+    if (!sendRelayedBody(pending_relayed_msgbodies.front())) {
+      DBG("successfully relayed pending msg body with "
+	  "r_cseq %d (%zd pending)\n",
+	  pending_relayed_msgbodies.front()->r_cseq, 
+	  pending_relayed_msgbodies.size()-1);
+      delete pending_relayed_msgbodies.front();
+      pending_relayed_msgbodies.pop();
+    } else {
+      DBG("relayed pending msg body with r_cseq %zd "
+	  "could not (yet) be sent (%zd pending)\n",
+	  pending_relayed_msgbodies.front()->r_cseq, 
+	  pending_relayed_msgbodies.size());
+    }
+  }
+}
+
+
+int AmB2BSession::sendRelayedBody(const B2BMsgBodyEvent* body_ev) {
+  trans_ticket tt; // empty transaction ticket
+  relayed_body_req[dlg.cseq] = AmSipTransaction("INVITE", body_ev->r_cseq, tt);
+  int reinv_result = dlg.reinvite("", body_ev->content_type, body_ev->body);
+
+  if (reinv_result) // failed
+    relayed_body_req.erase(dlg.cseq);
+
+  return reinv_result;
 }
 
 void AmB2BSession::relayEvent(AmEvent* ev)
@@ -285,6 +340,18 @@ bool AmB2BSession::onOtherReply(const AmSipReply& reply)
   return false;
 }
 
+/** re-invite failed while in established B2B call */
+void AmB2BSession::onFailedReinvite(const AmSipReply& reply) {
+  if (reply.code == 481 || reply.code == 408) { // 3261 14.1
+    DBG("re-INVITE failed with code %d - terminating this and the other leg\n", 
+	reply.code);
+    terminateOtherLeg();	   
+    terminateLeg();
+  } else {
+    DBG("re-INVITE failed with code %d\n", reply.code);
+  }
+}
+
 void AmB2BSession::terminateLeg()
 {
   setStopped();
@@ -302,8 +369,9 @@ void AmB2BSession::terminateOtherLeg()
 void AmB2BSession::relaySip(const AmSipRequest& req)
 {
   if (req.method != "ACK") {
-      relayed_req[dlg.cseq] = AmSipTransaction(req.method,req.cseq,req.tt);
-    dlg.sendRequest(req.method,"application/sdp",req.body,req.hdrs,SIP_FLAGS_VERBATIM);
+    relayed_req[dlg.cseq] = AmSipTransaction(req.method,req.cseq,req.tt);
+    dlg.sendRequest(req.method, "application/sdp", 
+		    req.body, req.hdrs, SIP_FLAGS_VERBATIM);
   } else {
     // its a (200) ACK 
     TransMap::iterator t = relayed_req.begin(); 
@@ -384,7 +452,8 @@ void AmB2BCallerSession::onB2BEvent(B2BEvent* ev)
 	if ((!sip_relay_only) && sip_relay_early_media_sdp && 
 	    reply.code>=180 && reply.code<=183 && (!reply.body.empty())) {
 	  if (reinviteCaller(reply)) {
-	    ERROR("re-INVITEing caller for early session - stopping this and other leg\n");
+	    ERROR("re-INVITEing caller for early session - stopping "
+		  "this and other leg\n");
 	    terminateOtherLeg();
 	    terminateLeg();
 	  }
@@ -473,7 +542,8 @@ void AmB2BCallerSession::connectCallee(const string& remote_party,
 
 int AmB2BCallerSession::reinviteCaller(const AmSipReply& callee_reply)
 {
-  return dlg.sendRequest("INVITE",callee_reply.content_type,callee_reply.body, "", SIP_FLAGS_VERBATIM);
+  return dlg.sendRequest("INVITE", callee_reply.content_type, 
+			 callee_reply.body, "", SIP_FLAGS_VERBATIM);
 }
 
 void AmB2BCallerSession::createCalleeSession() {
@@ -545,10 +615,12 @@ void AmB2BCalleeSession::onB2BEvent(B2BEvent* ev)
     dlg.remote_uri   = co_ev->remote_uri;
 
     if (co_ev->relayed_invite) {
-	relayed_req[dlg.cseq] = AmSipTransaction("INVITE", co_ev->r_cseq, trans_ticket());
+	relayed_req[dlg.cseq] = 
+	  AmSipTransaction("INVITE", co_ev->r_cseq, trans_ticket());
     }
 
-    dlg.sendRequest("INVITE",co_ev->content_type,co_ev->body,co_ev->hdrs,SIP_FLAGS_VERBATIM);
+    dlg.sendRequest("INVITE", co_ev->content_type, co_ev->body, 
+		    co_ev->hdrs, SIP_FLAGS_VERBATIM);
 
     return;
   }    

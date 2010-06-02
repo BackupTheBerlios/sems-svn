@@ -270,6 +270,19 @@ void AmSipDialog::updateStatus(const AmSipReply& reply, bool do_200_ack)
   }
 }
 
+bool AmSipDialog::getUACTransPending() { 
+  return !uac_trans.empty(); 
+}
+
+bool AmSipDialog::getUACInvTransPending() {
+  for (TransMap::iterator it=uac_trans.begin(); 
+       it != uac_trans.end(); it++) {
+    if (it->second.method == "INVITE")
+      return true;
+  }
+  return false;
+}
+
 string AmSipDialog::getContactHdr()
 {
   if(contact_uri.empty()) {
@@ -397,8 +410,11 @@ int AmSipDialog::reinvite(const string& hdrs,
 			  const string& body)
 {
   switch(status){
-  case Connected:
+  case Connected: {
+    if (getUACInvTransPending())
+      return E_IN_PROGRESS;
     return sendRequest("INVITE", content_type, body, hdrs);
+  } break;
   case Disconnecting:
   case Pending:
     DBG("reinvite(): we are not yet connected."
@@ -588,14 +604,14 @@ int AmSipDialog::sendRequest(const string& method,
   }
 
   if (SipCtrlInterface::send(req))
-    return -1;
+    return E_FAILED;
  
   uac_trans[cseq] = AmSipTransaction(method,cseq,req.tt);
 
   // increment for next request
   cseq++;
 
-  return 0;
+  return E_OK;
 }
 
 string AmSipDialog::get_uac_trans_method(unsigned int cseq)

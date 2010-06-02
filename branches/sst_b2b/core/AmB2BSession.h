@@ -31,6 +31,8 @@
 #include "AmSession.h"
 #include "AmSipDialog.h"
 
+#include <queue>
+
 enum { B2BTerminateLeg, 
        B2BConnectLeg, 
        B2BCallAccepted, 
@@ -151,6 +153,11 @@ class AmB2BSession: public AmSession
    */
   TransMap relayed_body_req;
 
+  /**
+     pending relayed messages
+   */
+  std::queue<B2BMsgBodyEvent*> pending_relayed_msgbodies;
+
   /** Requests received for relaying */
   std::map<int,AmSipRequest> recvd_req;
 
@@ -167,6 +174,10 @@ class AmB2BSession: public AmSession
 
   /** Terminate the other leg and forget it.*/
   virtual void terminateOtherLeg();
+
+
+  /** send a relayed body out as INVITE */
+  int sendRelayedBody(const B2BMsgBodyEvent* body_ev);
 
   /** @see AmSession */
   void onSipRequest(const AmSipRequest& req);
@@ -187,6 +198,9 @@ class AmB2BSession: public AmSession
    * @return false if reply was not processed
    */
   virtual bool onOtherReply(const AmSipReply& reply);
+
+  /** re-invite failed while in established B2B call */
+  virtual void onFailedReinvite(const AmSipReply& reply);
 
   AmB2BSession();
   AmB2BSession(const string& other_local_tag);
