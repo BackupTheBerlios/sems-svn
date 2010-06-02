@@ -256,8 +256,9 @@ void SSTB2BDialog::createCalleeSession()
     throw AmSession::Exception(500,"Server internal error");
   }
 
-  if (cfg.hasParameter("b_refresh_divider")) {
-    cfg.setParameter(CONFIGKEY_REFRESH_DIVIDER, cfg.getParameter("b_refresh_divider"));
+  if (SSTB2BFactory::cfg.hasParameter("b_refresh_divider")) {
+    SSTB2BFactory::cfg.setParameter(CONFIGKEY_REFRESH_DIVIDER, 
+				    SSTB2BFactory::cfg.getParameter("b_refresh_divider"));
   } else {
     // default: b leg / 3
     SSTB2BFactory::cfg.setParameter(CONFIGKEY_REFRESH_DIVIDER, "3");
