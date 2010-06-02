@@ -157,11 +157,15 @@ class AmB2BSession: public AmSession
   TransMap relayed_body_req;
 
   /**
-     pending relayed messages
+   *  pending relayed messages
    */
   std::queue<B2BMsgBodyEvent*> pending_relayed_msgbodies;
 
+  /** is INVITE transaction in the other leg pending? */
   bool other_leg_inv_pending;
+
+  string last_content_type;
+  string last_sdp;
 
   /** Requests received for relaying */
   std::map<int,AmSipRequest> recvd_req;

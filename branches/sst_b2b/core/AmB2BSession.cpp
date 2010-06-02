@@ -149,7 +149,13 @@ void AmB2BSession::onB2BEvent(B2BEvent* ev)
 
       DBG("received B2B Msg body event; is_offer=%s, r_cseq=%d\n",
 	  body_ev->is_offer?"true":"false", body_ev->r_cseq);
-      
+
+      if (!body_ev->body.empty()) {
+	DBG("updating saved SDP\n");
+	last_content_type = body_ev->content_type;
+	last_sdp = body_ev->body;
+      }
+
       if (body_ev->is_offer) {
 	if (dlg.getUACInvTransPending()) {
 	  // INVITE UAC transaction already in progress - save body
@@ -175,12 +181,17 @@ void AmB2BSession::onB2BEvent(B2BEvent* ev)
 	trans_ticket tt; // not used for ACK
 	AmSipTransaction trans("INVITE", body_ev->r_cseq, tt);
 	if (body_ev->body.empty()) {
-	  // todo (?): save last SDP and reuse it here
-	  DBG("relayed body INVITE failed - sending empty ACK (in the hope the call will continue)\n");
-	}
-	if (dlg.send_200_ack(trans, body_ev->content_type, body_ev->body, 
-			     "" /* hdrs - todo */, SIP_FLAGS_VERBATIM)) {
-	  ERROR("sending ACK with SDP\n");
+	  DBG("relayed body INVITE failed - sending ACK with last SDP "
+	      "(in the hope the call will continue)\n");
+	  if (dlg.send_200_ack(trans, last_content_type, last_sdp, 
+			       "" /* hdrs - todo */, SIP_FLAGS_VERBATIM)) {
+	    ERROR("sending ACK with last SDP\n");
+	  }
+	} else {
+	  if (dlg.send_200_ack(trans, body_ev->content_type, body_ev->body, 
+			       "" /* hdrs - todo */, SIP_FLAGS_VERBATIM)) {
+	    ERROR("sending ACK with SDP\n");
+	  }
 	}
       }
       return; 
@@ -428,8 +439,15 @@ void AmB2BSession::terminateOtherLeg()
 void AmB2BSession::relaySip(const AmSipRequest& req)
 {
   if (req.method != "ACK") {
+
+    if (req.method == "INVITE" && !req.body.empty()) {
+      DBG("updating saved SDP\n");
+      last_content_type = req.content_type;
+      last_sdp = req.body;
+    }
+
     relayed_req[dlg.cseq] = AmSipTransaction(req.method,req.cseq,req.tt);
-    dlg.sendRequest(req.method, "application/sdp", 
+    dlg.sendRequest(req.method, "application/sdp", // todo! content_type
 		    req.body, req.hdrs, SIP_FLAGS_VERBATIM);
   } else {
     // its a (200) ACK 
@@ -445,6 +463,12 @@ void AmB2BSession::relaySip(const AmSipRequest& req)
       return;
     }
     DBG("sending relayed ACK\n");
+    if (t->second.method == "INVITE" && !req.body.empty()) {
+      DBG("updating saved SDP\n");
+      last_content_type = req.content_type;
+      last_sdp = req.body;
+    }
+
     dlg.send_200_ack(AmSipTransaction(t->second.method, t->first,t->second.tt), 
 		     req.content_type, req.body, req.hdrs, SIP_FLAGS_VERBATIM);
     relayed_req.erase(t);
@@ -453,6 +477,12 @@ void AmB2BSession::relaySip(const AmSipRequest& req)
 
 void AmB2BSession::relaySip(const AmSipRequest& orig, const AmSipReply& reply)
 {
+  if (orig.method == "INVITE" && !reply.body.empty()) {
+    DBG("updating saved SDP\n");
+    last_content_type = reply.content_type;
+    last_sdp = reply.body;
+  }
+
   dlg.reply(orig,reply.code,reply.reason,
 	    reply.content_type,
 	    reply.body,reply.hdrs,SIP_FLAGS_VERBATIM);
@@ -601,6 +631,11 @@ void AmB2BCallerSession::connectCallee(const string& remote_party,
 
 int AmB2BCallerSession::reinviteCaller(const AmSipReply& callee_reply)
 {
+  
+  DBG("updating saved SDP\n");
+  last_content_type = callee_reply.content_type;
+  last_sdp = callee_reply.body;
+
   return dlg.sendRequest("INVITE", callee_reply.content_type, 
 			 callee_reply.body, "", SIP_FLAGS_VERBATIM);
 }
@@ -677,6 +712,10 @@ void AmB2BCalleeSession::onB2BEvent(B2BEvent* ev)
 	relayed_req[dlg.cseq] = 
 	  AmSipTransaction("INVITE", co_ev->r_cseq, trans_ticket());
     }
+
+    DBG("updating saved SDP\n");
+    last_content_type = co_ev->content_type;
+    last_sdp = co_ev->body;
 
     dlg.sendRequest("INVITE", co_ev->content_type, co_ev->body, 
 		    co_ev->hdrs, SIP_FLAGS_VERBATIM);
