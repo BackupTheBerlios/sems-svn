@@ -36,7 +36,7 @@
 //
 
 AmB2BSession::AmB2BSession()
-  : sip_relay_only(true)
+  : sip_relay_only(true), other_leg_inv_pending(false)
 {
 }
 
@@ -89,7 +89,6 @@ void AmB2BSession::onB2BEvent(B2BEvent* ev)
       assert(req_ev);
 
       if(req_ev->forward){
-
 	relaySip(req_ev->req);
       }
       else if( (req_ev->req.method == "BYE") ||
@@ -118,11 +117,12 @@ void AmB2BSession::onB2BEvent(B2BEvent* ev)
 		
 	  if(reply_ev->reply.code >= 200){
 
-	    if( (t_req->second.method == "INVITE") &&
-		(reply_ev->reply.code == 487)){
-	      
-	      terminateLeg();
+	    if ((t_req->second.method == "INVITE") &&	      
+		(reply_ev->reply.code == 487)) {
+	      // 487 reply to INVITE received - INVITE terminated
+		terminateLeg();
 	    }
+	    
 	    recvd_req.erase(t_req);
 	  } 
 	} else {
@@ -174,6 +174,10 @@ void AmB2BSession::onB2BEvent(B2BEvent* ev)
 	// todo: use that from uas_trans? 
 	trans_ticket tt; // not used for ACK
 	AmSipTransaction trans("INVITE", body_ev->r_cseq, tt);
+	if (body_ev->body.empty()) {
+	  // todo (?): save last SDP and reuse it here
+	  DBG("relayed body INVITE failed - sending empty ACK (in the hope the call will continue)\n");
+	}
 	if (dlg.send_200_ack(trans, body_ev->content_type, body_ev->body, 
 			     "" /* hdrs - todo */, SIP_FLAGS_VERBATIM)) {
 	  ERROR("sending ACK with SDP\n");
@@ -181,6 +185,17 @@ void AmB2BSession::onB2BEvent(B2BEvent* ev)
       }
       return; 
     }; break;
+
+  case B2BInvTransPending: {
+    DBG("INVITE transaction on other leg is pending\n");
+    other_leg_inv_pending = true;
+  } break;
+
+  case B2BInvTransFinished: {
+    DBG("INVITE transaction on other leg is finished\n");
+    other_leg_inv_pending = false;
+  } break;
+
   }
 
   //ERROR("unknown event caught\n");
@@ -188,6 +203,14 @@ void AmB2BSession::onB2BEvent(B2BEvent* ev)
 
 void AmB2BSession::onSipRequest(const AmSipRequest& req)
 {
+  if (sip_relay_only && other_leg_inv_pending &&
+      req.method == "INVITE") {
+    DBG("received INVITE while Inv transaction is pending on other leg\n");
+    dlg.updateStatus(req);
+    // reply with 491 so other side will retry later 
+    dlg.reply(req, 491, "Request Pending");
+  }
+
   bool fwd = sip_relay_only &&
     (req.method != "BYE") &&
     (req.method != "CANCEL");
@@ -229,13 +252,19 @@ void AmB2BSession::onSipReply(const AmSipReply& reply)
     if (sip_relay_only) {
       // even though we are in sip_relay_only mode
 
+      if (is_inv_trans && 
+	  reply.code >= 200) {
+	DBG("notifying the other leg of finished INVITE transaction\n");
+	relayEvent(new B2BEvent(B2BInvTransFinished));
+      }
+
       bool relay_body = 
-	(// positive reply
+	(// in reply to INVITE
+	 is_inv_trans && 
+	 // positive reply
 	 (200 <= reply.code) && (reply.code < 300) 
 	 // with body
-	 && !reply.body.empty() &&
-	 // in reply to INVITE
-	 is_inv_trans);
+	 && !reply.body.empty());
       
       if (relay_body) {
 	// is it an answer to a relayed body, or an answer to empty re-INVITE? 
@@ -277,6 +306,17 @@ void AmB2BSession::onSipReply(const AmSipReply& reply)
 
       // check for failed reinvites
       if (is_inv_trans && reply.code >= 300) {
+	
+	// is it an failed answer to a relayed body?
+	TransMap::iterator rel_body_it = relayed_body_req.find(reply.cseq);
+	bool is_offer =  (rel_body_it == relayed_body_req.end());
+	if (!is_offer) {
+	  DBG("relayed body INVITE failed\n");
+	  // todo (?): save last SDP and reuse it here
+	  relayEvent(new B2BMsgBodyEvent("", "", is_offer, 
+					 rel_body_it->second.cseq));
+	}
+
 	onFailedReinvite(reply);
       }
     }
@@ -303,6 +343,25 @@ void AmB2BSession::onSipReply(const AmSipReply& reply)
   }
 }
 
+void AmB2BSession::sendReinvite(bool updateSDP, const string& headers) {
+  if (sip_relay_only) {
+    if (other_leg_inv_pending) {
+      DBG("not sending empty reinvite - Invite on other leg pending\n");
+      return;
+    }
+
+    // we send empty reinvite 
+    DBG("sending empty reinvite\n");
+    if (dlg.reinvite(headers, "", "") == E_OK) {
+      DBG("notifying the other leg of INVITE transaction in progress\n");
+      relayEvent(new B2BEvent(B2BInvTransPending));
+    } else {
+      DBG("sending empty re-Invite failed\n");
+    }
+  } else {
+    AmSession::sendReinvite(updateSDP, headers);
+  }
+}
 
 int AmB2BSession::sendRelayedBody(const B2BMsgBodyEvent* body_ev) {
   trans_ticket tt; // empty transaction ticket
@@ -443,7 +502,7 @@ void AmB2BCallerSession::onB2BEvent(B2BEvent* ev)
     }
 
     DBG("reply received from other leg\n");
-      
+
     switch(callee_status){
     case NoReply:
     case Ringing:

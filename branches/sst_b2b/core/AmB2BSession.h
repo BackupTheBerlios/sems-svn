@@ -38,7 +38,10 @@ enum { B2BTerminateLeg,
        B2BCallAccepted, 
        B2BSipRequest, 
        B2BSipReply,
-       B2BMsgBody };
+       B2BMsgBody,
+       B2BInvTransPending,
+       B2BInvTransFinished      
+};
 
 /** \brief base class for event in B2B session */
 struct B2BEvent: public AmEvent
@@ -158,6 +161,8 @@ class AmB2BSession: public AmSession
    */
   std::queue<B2BMsgBodyEvent*> pending_relayed_msgbodies;
 
+  bool other_leg_inv_pending;
+
   /** Requests received for relaying */
   std::map<int,AmSipRequest> recvd_req;
 
@@ -175,6 +180,8 @@ class AmB2BSession: public AmSession
   /** Terminate the other leg and forget it.*/
   virtual void terminateOtherLeg();
 
+  /** send reinvite - if in sip_relay_only mode, send empty body */
+  void sendReinvite(bool updateSDP, const string& headers);
 
   /** send a relayed body out as INVITE */
   int sendRelayedBody(const B2BMsgBodyEvent* body_ev);

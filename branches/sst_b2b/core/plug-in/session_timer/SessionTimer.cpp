@@ -131,12 +131,20 @@ bool SessionTimer::onSendReply(const AmSipRequest& req,
   return false;
 }
 
-
-/* Session Timer: -ssa */
 int  SessionTimer::configure(AmConfigReader& conf) 
 {
   if(session_timer_conf.readFromConfig(conf))
     return -1;
+
+  if (conf.hasParameter(CONFIGKEY_REFRESH_DIVIDER)) {
+    unsigned int cfg_divider = 0;
+    if (str2i(conf.getParameter(CONFIGKEY_REFRESH_DIVIDER), cfg_divider) || 
+	(!cfg_divider)) {
+      WARN("invalid "CONFIGKEY_REFRESH_DIVIDER" specified. using default (2).\n");
+      cfg_divider = 2;
+    }
+    divider = cfg_divider;
+  }
 
   session_interval = session_timer_conf.getSessionExpires();
   min_se = session_timer_conf.getMinimumTimer();
@@ -298,10 +306,10 @@ void SessionTimer::setTimers(AmSession* s)
     
   // set session refresh action timer, after half the expiration
   if (session_refresher == refresh_local) {
-    DBG("Setting session refresh timer: %ds, tag '%s'\n", session_interval/2, 
+    DBG("Setting session refresh timer: %ds, tag '%s'\n", session_interval/divider, 
 	s->getLocalTag().c_str());
     UserTimer::instance()->
-      setTimer(ID_SESSION_REFRESH_TIMER, session_interval/2, s->getLocalTag());
+      setTimer(ID_SESSION_REFRESH_TIMER, session_interval/divider, s->getLocalTag());
   }
 }
 
@@ -351,25 +359,25 @@ AmSessionTimerConfig::~AmSessionTimerConfig()
 int AmSessionTimerConfig::readFromConfig(AmConfigReader& cfg)
 {
   // enable_session_timer
-  if(cfg.hasParameter("enable_session_timer")){
-    if(!setEnableSessionTimer(cfg.getParameter("enable_session_timer"))){
-      ERROR("invalid enable_session_timer specified\n");
+  if(cfg.hasParameter(CONFIGKEY_ENABLE_SESSION_TIMER)){
+    if(!setEnableSessionTimer(cfg.getParameter(CONFIGKEY_ENABLE_SESSION_TIMER))){
+      ERROR("invalid "CONFIGKEY_ENABLE_SESSION_TIMER" specified\n");
       return -1;
     }
   }
 
   // session_expires
-  if(cfg.hasParameter("session_expires")){
-    if(!setSessionExpires(cfg.getParameter("session_expires"))){
-      ERROR("invalid session_expires specified\n");
+  if(cfg.hasParameter(CONFIGKEY_SESSION_EXPIRES)){
+    if(!setSessionExpires(cfg.getParameter(CONFIGKEY_SESSION_EXPIRES))){
+      ERROR("invalid "CONFIGKEY_SESSION_EXPIRES" specified\n");
       return -1;
     }
   }
 
   // minimum_timer
-  if(cfg.hasParameter("minimum_timer")){
-    if(!setMinimumTimer(cfg.getParameter("minimum_timer"))){
-      ERROR("invalid minimum_timer specified\n");
+  if(cfg.hasParameter(CONFIGKEY_MINIMUM_TIMER)){
+    if(!setMinimumTimer(cfg.getParameter(CONFIGKEY_MINIMUM_TIMER))){
+      ERROR("invalid "CONFIGKEY_MINIMUM_TIMER" specified\n");
       return -1;
     }
   }

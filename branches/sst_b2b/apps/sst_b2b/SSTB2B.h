@@ -90,8 +90,6 @@ class SSTB2BDialog : public AmB2BCallerSession
   void onInvite(const AmSipRequest& req);
   void onCancel();
 
-  void sendReinvite(bool updateSDP, const string& headers);
-
  protected:
   void onSipReply(const AmSipReply& reply);
   void onSipRequest(const AmSipRequest& req);  
@@ -128,7 +126,5 @@ class SSTB2BCalleeSession
   inline UACAuthCred* getCredentials();
   
   void setAuthHandler(AmSessionEventHandler* h) { auth = h; }
-
-  void sendReinvite(bool updateSDP, const string& headers);
 };
 #endif                           

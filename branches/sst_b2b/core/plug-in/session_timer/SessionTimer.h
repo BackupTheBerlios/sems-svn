@@ -45,6 +45,10 @@ class AmTimeoutEvent;
 #define SESSION_EXPIRES              120  // seconds
 #define MINIMUM_TIMER                90   //seconds
 
+#define CONFIGKEY_ENABLE_SESSION_TIMER "enable_session_timer"
+#define CONFIGKEY_SESSION_EXPIRES      "session_expires"
+#define CONFIGKEY_MINIMUM_TIMER        "minimum_timer"
+#define CONFIGKEY_REFRESH_DIVIDER      "refresh_divider"
 
 /** \brief Factory of the session timer event handler */
 class SessionTimerFactory: public AmSessionEventHandlerFactory
@@ -71,7 +75,7 @@ class AmSessionTimerConfig
   unsigned int SessionExpires;
   /** Session Timer: Minimum Session-Expires */
   unsigned int MinimumTimer;
-    
+
 public:
   AmSessionTimerConfig();
   ~AmSessionTimerConfig();
@@ -100,6 +104,9 @@ class SessionTimer: public AmSessionEventHandler
   AmSessionTimerConfig session_timer_conf;
   AmSession* s;
 
+  /** refresh divider - refresh after session expires / divider */
+  int divider;
+
   enum SessionRefresher {
     refresh_local,
     refresh_remote
@@ -123,8 +130,6 @@ class SessionTimer: public AmSessionEventHandler
 
   string getReplyHeaders(const AmSipRequest& req);
   string getRequestHeaders(const string& method);
-
-  /* Session Timer: -ssa */
 
   // @return true if OK
   void onTimeout();

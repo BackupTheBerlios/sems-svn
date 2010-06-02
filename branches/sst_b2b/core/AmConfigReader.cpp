@@ -166,3 +166,11 @@ unsigned int AmConfigReader::getParameterInt(const string& param, unsigned int d
   else
     return result;
 }
+
+void AmConfigReader::setParameter(const string& key, const string& val) {
+  keys[key] = val;
+}
+
+void AmConfigReader::deleteParameter(const string& key) {
+  keys.erase(key);
+}

@@ -57,6 +57,9 @@ class AmConfigReader
 
   std::map<string,string>::const_iterator end() const
     { return keys.end(); }
+
+  void setParameter(const string& key, const string& val);
+  void deleteParameter(const string& key);
 };
 
 #endif

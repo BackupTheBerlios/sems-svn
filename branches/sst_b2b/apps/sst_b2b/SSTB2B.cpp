@@ -43,6 +43,8 @@ AmSessionEventHandlerFactory* SSTB2BFactory::session_timer_fact = NULL;
 
 EXPORT_SESSION_FACTORY(SSTB2BFactory,MOD_NAME);
 
+#define CONFIGKEY_REFRESH_DIVIDER      "refresh_divider" // from SessionTimer.h
+
 SSTB2BFactory::SSTB2BFactory(const string& _app_name)
 : AmSessionFactory(_app_name)
 {
@@ -76,12 +78,19 @@ AmSession* SSTB2BFactory::onInvite(const AmSipRequest& req)
     ERROR("could not get a session timer event handler\n");
     throw AmSession::Exception(500,"Server internal error");
   }
+  if (cfg.hasParameter("a_refresh_divider")) {
+    cfg.setParameter(CONFIGKEY_REFRESH_DIVIDER, cfg.getParameter("a_refresh_divider"));
+  } else {
+    // default: a leg / 2
+    cfg.setParameter(CONFIGKEY_REFRESH_DIVIDER, "2");
+  }
   if(h->configure(cfg)){
     ERROR("Could not configure the session timer: disabling session timers.\n");
     delete h;
   } else {
     b2b_dlg->addHandler(h);
   }
+  cfg.deleteParameter(CONFIGKEY_REFRESH_DIVIDER);
 
   return b2b_dlg;
 }
@@ -103,7 +112,7 @@ SSTB2BDialog::~SSTB2BDialog()
 
 void SSTB2BDialog::onInvite(const AmSipRequest& req)
 {
-  DBG("onINVITE -------------------------------\n");
+  DBG("onINVITE \n");
   // this will prevent us from being added to media processor
   setInOut(NULL,NULL); 
 
@@ -126,21 +135,6 @@ void SSTB2BDialog::onInvite(const AmSipRequest& req)
   
   set_sip_relay_only(true);
   connectCallee("<" + req.r_uri + ">", req.r_uri, true);
-}
-
-void SSTB2BDialog::sendReinvite(bool updateSDP, const string& headers) {
-  if (sip_relay_only) {
-    // we send empty reinvite 
-    DBG("sending empty reinvite in callee session\n");
-    dlg.reinvite(headers, "", ""); 
-  } else {
-    AmB2BCallerSession::sendReinvite(updateSDP, headers);
-  }
-
-  // // we send empty reinvite
-  // dlg.reinvite(headers, "", "");
-  // we send reinvite with the last body we got from the other side
-  // last_otherleg_content_type, last_otherleg_body);
 }
 
 void SSTB2BDialog::process(AmEvent* ev)
@@ -261,13 +255,23 @@ void SSTB2BDialog::createCalleeSession()
     delete callee_session;
     throw AmSession::Exception(500,"Server internal error");
   }
+
+  if (cfg.hasParameter("b_refresh_divider")) {
+    cfg.setParameter(CONFIGKEY_REFRESH_DIVIDER, cfg.getParameter("b_refresh_divider"));
+  } else {
+    // default: b leg / 3
+    SSTB2BFactory::cfg.setParameter(CONFIGKEY_REFRESH_DIVIDER, "3");
+  }
+
   if(h->configure(SSTB2BFactory::cfg)){
     ERROR("Could not configure the session timer: disabling session timers.\n");
     delete h;
   } else {
     callee_session->addHandler(h);
   }
-  
+  SSTB2BFactory::cfg.deleteParameter(CONFIGKEY_REFRESH_DIVIDER);
+
+
   AmSipDialog& callee_dlg = callee_session->dlg;
   
   other_id = AmSession::getNewId();
@@ -378,15 +382,5 @@ void SSTB2BCalleeSession::onSendRequest(const string& method, const string& cont
   
   AmB2BCalleeSession::onSendRequest(method, content_type,
 				     body, hdrs, flags, cseq);
-}
-
-void SSTB2BCalleeSession::sendReinvite(bool updateSDP, const string& headers) {
-  if (sip_relay_only) {
-    // we send empty reinvite 
-    DBG("sending empty reinvite in callee session\n");
-    dlg.reinvite(headers, "", ""); 
-  } else {
-    AmB2BCalleeSession::sendReinvite(updateSDP, headers);
-  }
 }
 
