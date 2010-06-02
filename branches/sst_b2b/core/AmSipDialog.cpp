@@ -678,8 +678,10 @@ int AmSipDialog::send_200_ack(const AmSipTransaction& t,
 
   }
 
-  if(!route.empty())
-    req.route = route; //getRoute();
+  if(!route.empty()) {
+    // r1853
+    req.route = SIP_HDR_COLSP(SIP_HDR_ROUTE) + route + CRLF;
+  }
     
   if(!body.empty()) {
     req.content_type = content_type;
