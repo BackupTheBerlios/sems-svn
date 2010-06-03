@@ -323,7 +323,7 @@ void AmB2BSession::onSipReply(const AmSipReply& reply)
 	bool is_offer =  (rel_body_it == relayed_body_req.end());
 	if (!is_offer) {
 	  DBG("relayed body INVITE failed\n");
-	  // todo (?): save last SDP and reuse it here
+	  // send empty body - other side may use last SDP
 	  relayEvent(new B2BMsgBodyEvent("", "", is_offer, 
 					 rel_body_it->second.cseq));
 	}
@@ -447,7 +447,7 @@ void AmB2BSession::relaySip(const AmSipRequest& req)
     }
 
     relayed_req[dlg.cseq] = AmSipTransaction(req.method,req.cseq,req.tt);
-    dlg.sendRequest(req.method, "application/sdp", // todo! content_type
+    dlg.sendRequest(req.method, req.content_type,
 		    req.body, req.hdrs, SIP_FLAGS_VERBATIM);
   } else {
     // its a (200) ACK 
@@ -619,7 +619,7 @@ void AmB2BCallerSession::connectCallee(const string& remote_party,
 
   B2BConnectEvent* ev = new B2BConnectEvent(remote_party,remote_uri);
 
-  ev->content_type = "application/sdp"; // FIXME
+  ev->content_type = invite_req.content_type;
   ev->body         = invite_req.body;
   ev->hdrs         = invite_req.hdrs;
   ev->relayed_invite = relayed_invite;
